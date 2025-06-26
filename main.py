@@ -1,89 +1,60 @@
+# main.py
 import os
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_chroma import Chroma
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.agents import create_tool_calling_agent, AgentExecutor
+from langchain_core.prompts import ChatPromptTemplate
+from tools.budget_tool import estimate_budget_tool, TravelModel, format_travel_summary
+from tools.weather_tool import weather_forecast_tool
+from tools.rag_tool import get_rag_tool
+from langchain_core.output_parsers import PydanticOutputParser
+
 load_dotenv()
 
-# data management
+# === Prompt and Agent Setup ===
+def get_integrated_agent():
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-preview-04-17", temperature=0.2)
 
-DATA_FOLDER = "data"
-CHROMA_DB = "db"
-EMBED_MODEL = "models/embedding-001"
-LLM_MODEL = "gemini-2.5-flash-preview-04-17"  # model, using Gemini currently
+    parser = PydanticOutputParser(pydantic_object=TravelModel)
 
-#load PDFs
-def load_docs():
-    docs = []
-    for file in os.listdir(DATA_FOLDER):
-        if file.endswith(".pdf"):
-            loader = PyPDFLoader(os.path.join(DATA_FOLDER, file))
-            docs.extend(loader.load())
-    return docs
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", '''
+You are a smart tourism assistant. Based on user's query, perform one or more of the following tasks:
+- If the user asks tourism or privacy policy-related questions, use the RAG tool.
+- If the user needs a travel plan or cost estimate, call the budget tool.
+- If the user asks for weather/climate, call the weather tool.
+Always be concise and helpful.
+'''),
+        ("user", "{query}"),
+        ("placeholder", "{agent_scratchpad}"),
+    ])
 
-#Split, Embed  (vector store)
-def prepare_vectorstore():
-    documents = load_docs()
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    chunks = splitter.split_documents(documents)
+    tools = [
+        estimate_budget_tool,
+        weather_forecast_tool,
+        get_rag_tool()
+    ]
 
-    embeddings = GoogleGenerativeAIEmbeddings(model=EMBED_MODEL)
-    vectordb = Chroma.from_documents(chunks, embedding=embeddings, persist_directory=CHROMA_DB)
-    vectordb.persist()
-    return vectordb
+    agent = create_tool_calling_agent(llm=llm, prompt=prompt, tools=tools)
+    executor = AgentExecutor(agent=agent, tools=tools)
+    return executor
 
-#Load or Prepare Vector DB 
-def get_chain():
-    vectordb = (
-        Chroma(persist_directory=CHROMA_DB, embedding_function=GoogleGenerativeAIEmbeddings(model=EMBED_MODEL))
-        if os.path.exists(CHROMA_DB)
-        else prepare_vectorstore()
-    )
-
-    retriever = vectordb.as_retriever(search_kwargs={"k": 3})
-    llm = ChatGoogleGenerativeAI(model=LLM_MODEL, temperature=0.2)
-
-    prompt = PromptTemplate.from_template("""
-You are a helpful assistant who will answer questions on tourism and nublo's privacy policy . Use the following context to answer the user's question accurately and concisely.
-If the context is not helpful then answer the question using your own knowledge. Do not tell the user that how did you get the information and whether it is present in nulbo's 
-privacy policy or not.                               
-Context:
-{context}
-Question: {question}
-Answer:
-""")
-
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        retriever=retriever,
-        chain_type="stuff",
-        chain_type_kwargs={"prompt": prompt},
-        return_source_documents=True
-    )
-
-    return qa_chain
-
+# === Chat Loop ===
 def chat():
-    chain = get_chain()
-    llm_fallback = ChatGoogleGenerativeAI(model=LLM_MODEL, temperature=0.4)
-
-    print("Tourism RAG Chatbot Ready. Ask your question (type 'exit' to quit):")
+    agent_executor = get_integrated_agent()
+    print("\nIntegrated Tourism Assistant Ready. Type your query or 'exit' to quit.")
 
     while True:
-        q = input("\nYou: ")
-        if q.lower().strip() == "exit":
+        query = input("\nYou: ")
+        if query.lower().strip() == "exit":
             break
-        result = chain.invoke({"query": q})
-        answer = result["result"]
-        sources = result["source_documents"]
 
-        if "I cannot" in answer or not sources:
-            # Fallback to general LLM ans if RAG fails
-            answer = llm_fallback.invoke(q)
-        print("\nBot:", result["result"])
+        try:
+            result = agent_executor.invoke({"query": query})
+            print("\nBot:", result["output"])
+        except Exception as e:
+            print("\nBot: Sorry, I couldn't process that properly.")
+            print("Debug Info:", e)
 
 if __name__ == "__main__":
     chat()
