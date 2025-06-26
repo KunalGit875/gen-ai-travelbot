@@ -1,5 +1,11 @@
-langchain-community 
-langchain-core 
-langchain-google-genai 
-pypdf 
-chromadb
+langchain
+wikipedia
+langchain-community
+langchain-openai
+langchain-anthropic
+python-dotenv
+pydantic
+duckduckgo-search
+meteostat
+geopy
+dateparser
