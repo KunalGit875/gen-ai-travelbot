@@ -40,21 +40,24 @@ Always be concise and helpful.
     return executor
 
 # === Chat Loop ===
-def chat():
-    agent_executor = get_integrated_agent()
-    print("\nIntegrated Tourism Assistant Ready. Type your query or 'exit' to quit.")
+# def chat():
+#     agent_executor = get_integrated_agent()
+#     print("\nIntegrated Tourism Assistant Ready. Type your query or 'exit' to quit.")
 
-    while True:
-        query = input("\nYou: ")
-        if query.lower().strip() == "exit":
-            break
+#     while True:
+#         query = input("\nYou: ")
+#         if query.lower().strip() == "exit":
+#             break
 
-        try:
-            result = agent_executor.invoke({"query": query})
-            print("\nBot:", result["output"])
-        except Exception as e:
-            print("\nBot: Sorry, I couldn't process that properly.")
-            print("Debug Info:", e)
+#         try:
+#             result = agent_executor.invoke({"query": query})
+#             print("\nBot:", result["output"])
+#         except Exception as e:
+#             print("\nBot: Sorry, I couldn't process that properly.")
+#             print("Debug Info:", e)
 
-if __name__ == "__main__":
-    chat()
+# if __name__ == "__main__":
+#     chat()
+
+# Exported to be used in FastAPI
+agent_executor = get_integrated_agent()
