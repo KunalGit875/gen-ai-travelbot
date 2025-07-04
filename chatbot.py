@@ -22,7 +22,9 @@ def get_integrated_agent():
         ("system", '''
             You are a smart tourism assistant. Based on user's query, perform one or more of the following tasks:
             - If the user asks tourism or privacy policy-related questions, use the RAG tool.
-            - If the user needs a travel plan or cost estimate, call the budget tool.
+            - If the user needs a travel plan or cost estimate, call the budget tool, and use the weather tool to judge 
+              the whether items like umbrellas or raincoat is requried. Give a rough timeline of what the user should do 
+              over the duration of the travel. Also give important emergency phone numbers of that place like police,ambulance etc.
             - If the user asks for weather/climate, call the weather tool.
             Always be concise and helpful.
         '''),
