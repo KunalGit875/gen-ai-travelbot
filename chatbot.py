@@ -8,6 +8,7 @@ from tools.budget_tool import estimate_budget_tool, TravelModel, format_travel_s
 from tools.weather_tool import weather_forecast_tool
 from tools.rag_tool import get_rag_tool
 from langchain_core.output_parsers import PydanticOutputParser
+from langchain.memory import ConversationBufferMemory
 
 load_dotenv()
 
@@ -25,6 +26,8 @@ You are a smart tourism assistant. Based on user's query, perform one or more of
 - If the user asks for weather/climate, call the weather tool.
 Always be concise and helpful.
 '''),
+        ("system", "..."),
+        ("placeholder", "{chat_history}"),
         ("user", "{query}"),
         ("placeholder", "{agent_scratchpad}"),
     ])
@@ -35,29 +38,9 @@ Always be concise and helpful.
         get_rag_tool()
     ]
 
+    memory = ConversationBufferMemory(return_messages=True, memory_key="chat_history")
     agent = create_tool_calling_agent(llm=llm, prompt=prompt, tools=tools)
-    executor = AgentExecutor(agent=agent, tools=tools)
+    executor = AgentExecutor(agent=agent, tools=tools, memory=memory, verbose=True)
     return executor
 
-# === Chat Loop ===
-# def chat():
-#     agent_executor = get_integrated_agent()
-#     print("\nIntegrated Tourism Assistant Ready. Type your query or 'exit' to quit.")
-
-#     while True:
-#         query = input("\nYou: ")
-#         if query.lower().strip() == "exit":
-#             break
-
-#         try:
-#             result = agent_executor.invoke({"query": query})
-#             print("\nBot:", result["output"])
-#         except Exception as e:
-#             print("\nBot: Sorry, I couldn't process that properly.")
-#             print("Debug Info:", e)
-
-# if __name__ == "__main__":
-#     chat()
-
-# Exported to be used in FastAPI
 agent_executor = get_integrated_agent()
