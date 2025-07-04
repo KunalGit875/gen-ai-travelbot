@@ -20,13 +20,12 @@ def get_integrated_agent():
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", '''
-You are a smart tourism assistant. Based on user's query, perform one or more of the following tasks:
-- If the user asks tourism or privacy policy-related questions, use the RAG tool.
-- If the user needs a travel plan or cost estimate, call the budget tool.
-- If the user asks for weather/climate, call the weather tool.
-Always be concise and helpful.
-'''),
-        ("system", "..."),
+            You are a smart tourism assistant. Based on user's query, perform one or more of the following tasks:
+            - If the user asks tourism or privacy policy-related questions, use the RAG tool.
+            - If the user needs a travel plan or cost estimate, call the budget tool.
+            - If the user asks for weather/climate, call the weather tool.
+            Always be concise and helpful.
+        '''),
         ("placeholder", "{chat_history}"),
         ("user", "{query}"),
         ("placeholder", "{agent_scratchpad}"),
