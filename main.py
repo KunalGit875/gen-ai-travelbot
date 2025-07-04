@@ -1,60 +1,19 @@
-# main.py
-import os
-from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain_core.prompts import ChatPromptTemplate
-from tools.budget_tool import estimate_budget_tool, TravelModel, format_travel_summary
-from tools.weather_tool import weather_forecast_tool
-from tools.rag_tool import get_rag_tool
-from langchain_core.output_parsers import PydanticOutputParser
+# run -> uvicorn main:app --reload  -> in vsc and go to the local host shown on vsc terminal
 
-load_dotenv()
+from fastapi import FastAPI
+from pydantic import BaseModel
+from chatbot import agent_executor
 
-# === Prompt and Agent Setup ===
-def get_integrated_agent():
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-preview-04-17", temperature=0.2)
+app = FastAPI()
 
-    parser = PydanticOutputParser(pydantic_object=TravelModel)
+class Query(BaseModel):
+    message: str
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", '''
-You are a smart tourism assistant. Based on user's query, perform one or more of the following tasks:
-- If the user asks tourism or privacy policy-related questions, use the RAG tool.
-- If the user needs a travel plan or cost estimate, call the budget tool.
-- If the user asks for weather/climate, call the weather tool.
-Always be concise and helpful.
-'''),
-        ("user", "{query}"),
-        ("placeholder", "{agent_scratchpad}"),
-    ])
+@app.post("/chat")
+async def chat(query: Query):
+    try:
+        result = await agent_executor.ainvoke({"query": query.message})
+        return {"response": result["output"]}
+    except Exception as e:
+        return {"response": "Sorry, something went wrong.", "error": str(e)}
 
-    tools = [
-        estimate_budget_tool,
-        weather_forecast_tool,
-        get_rag_tool()
-    ]
-
-    agent = create_tool_calling_agent(llm=llm, prompt=prompt, tools=tools)
-    executor = AgentExecutor(agent=agent, tools=tools)
-    return executor
-
-# === Chat Loop ===
-def chat():
-    agent_executor = get_integrated_agent()
-    print("\nIntegrated Tourism Assistant Ready. Type your query or 'exit' to quit.")
-
-    while True:
-        query = input("\nYou: ")
-        if query.lower().strip() == "exit":
-            break
-
-        try:
-            result = agent_executor.invoke({"query": query})
-            print("\nBot:", result["output"])
-        except Exception as e:
-            print("\nBot: Sorry, I couldn't process that properly.")
-            print("Debug Info:", e)
-
-if __name__ == "__main__":
-    chat()
