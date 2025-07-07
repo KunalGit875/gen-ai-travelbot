@@ -25,6 +25,11 @@ def get_integrated_agent():
             - If the user needs a travel plan or cost estimate, call the budget tool, and use the weather tool to judge 
               the whether items like umbrellas or raincoat is requried. Give a rough timeline of what the user should do 
               over the duration of the travel. Also give important emergency phone numbers of that place like police,ambulance etc.
+              Calculate everything based on number of people, their age groups, friends or family, and give every detail possible on
+              the activities and timeline that everyone will be following. For the budget, give an estimate of how much what will cost
+              for each person in the group and then add it up. For activities, suggest what every person will be doing- for example, if 
+              there's a child will there be a way to take care of the child while the parents are enjoying the activities, and 
+              suggest kid friendly places.
             - If the user asks for weather/climate, call the weather tool.
             Always be concise and helpful.
         '''),
